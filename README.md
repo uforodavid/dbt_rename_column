@@ -8,7 +8,7 @@ Add to your `packages.yml`:
 
 ```yaml
 packages:
-  - git: "https://github.com/daviddata/dbt_rename_columns.git"
+  - git: "https://github.com/uforodavid/dbt_rename_column.git"
     revision: v0.1.0
 ```
 
@@ -44,7 +44,7 @@ This queries your warehouse's `INFORMATION_SCHEMA` and prints a report showing e
 ### 3. Preview file changes (dry run)
 
 ```bash
-python dbt_packages/dbt_rename_columns/scripts/rename_columns.py \
+python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir . \
   --dry-run
 ```
@@ -54,7 +54,7 @@ This scans all `.sql` and `.yml` files and shows exactly what would change — n
 ### 4. Apply the renames
 
 ```bash
-python dbt_packages/dbt_rename_columns/scripts/rename_columns.py \
+python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir .
 ```
 
@@ -71,7 +71,7 @@ dbt run   # optional: run in dev to confirm
 
 ```bash
 # Remove backup files
-python dbt_packages/dbt_rename_columns/scripts/rename_columns.py \
+python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir . \
   --clean-backups
 
@@ -84,7 +84,7 @@ python dbt_packages/dbt_rename_columns/scripts/rename_columns.py \
 If something goes wrong:
 
 ```bash
-python dbt_packages/dbt_rename_columns/scripts/rename_columns.py \
+python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir . \
   --rollback
 ```
@@ -119,7 +119,7 @@ This restores all files from their `.rename_backup` copies.
 ## CLI Reference
 
 ```
-python scripts/rename_columns.py [OPTIONS]
+python dbt_packages/dbt_rename_column/scripts/rename_columns.py [OPTIONS]
 
 Options:
   --project-dir PATH   Path to dbt project root (default: .)
