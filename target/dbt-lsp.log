@@ -10,3 +10,18 @@
 18:20:30.603976 [info ]: Waiting for lease on 'dbt_packages' directory
 18:20:31.131846 [info ]: Started loading project
 18:20:31.132580 [info ]: Finished loading project [  0.00s]
+18:20:53.864333 [info ]: Started loading project
+18:20:53.864559 [info ]: Finished loading project [  0.00s]
+18:20:54.239255 [info ]: Waiting for lease on 'dbt_packages' directory
+18:20:54.470928 [info ]: Started loading project
+18:20:54.472333 [info ]: Finished loading project [  0.00s]
+18:26:01.839916 [info ]: Started loading project
+18:26:01.844699 [info ]: Finished loading project [  0.00s]
+18:26:02.084749 [info ]: Waiting for lease on 'dbt_packages' directory
+18:26:02.307026 [info ]: Started loading project
+18:26:02.307199 [info ]: Finished loading project [  0.00s]
+18:26:24.314698 [info ]: Started loading project
+18:26:24.315036 [info ]: Finished loading project [  0.00s]
+18:26:24.675313 [info ]: Waiting for lease on 'dbt_packages' directory
+18:26:24.895025 [info ]: Started loading project
+18:26:24.895492 [info ]: Finished loading project [  0.00s]
