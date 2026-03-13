@@ -1,0 +1,14 @@
+name: 'dbt_rename_columns'
+version: '0.1.0'
+config-version: 2
+
+require-dbt-version: [">=1.5.0", "<2.0.0"]
+
+vars:
+  # Users override this in their own dbt_project.yml
+  # Example:
+  #   vars:
+  #     column_renames:
+  #       platform: user_provider
+  #       foo_bar: foobar
+  column_renames: {}
