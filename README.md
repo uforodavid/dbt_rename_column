@@ -1,6 +1,8 @@
-# dbt_rename_columns
+# dbt_rename_column
 
-A dbt package for safely renaming columns across your entire project — audit the blast radius with a dbt macro, then apply changes with a Python CLI.
+A dbt package for safely renaming columns across your entire project — no manual find-and-replace across files.
+
+No warehouse connection required. Works entirely from your local project files and the dbt manifest.
 
 ## Installation
 
@@ -18,7 +20,7 @@ Then run:
 dbt deps
 ```
 
-## Quick Start
+## How to Rename a Column
 
 ### 1. Define your renames
 
@@ -31,17 +33,25 @@ vars:
     foo_bar: foobar
 ```
 
-### 2. Audit the blast radius
+### 2. Compile your project
 
-Run the audit macro to see which warehouse tables/views have the target columns:
+```bash
+dbt compile
+```
+
+This generates `target/manifest.json`, which the audit macro reads to find documented columns.
+
+### 3. Audit the blast radius
 
 ```bash
 dbt run-operation rename_audit
 ```
 
-This queries your warehouse's `INFORMATION_SCHEMA` and prints a report showing every model that contains columns matching your rename map.
+This scans your manifest and prints every **documented** column (defined in `schema.yml`) that matches your rename map. No warehouse connection needed.
 
-### 3. Preview file changes (dry run)
+> **Note:** Columns used only as SQL aliases (e.g. `'value' as platform`) won't appear in the manifest unless documented in a `schema.yml`. The Python script in step 4 will still find and rename them.
+
+### 4. Preview file changes (dry run)
 
 ```bash
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
@@ -49,25 +59,25 @@ python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --dry-run
 ```
 
-This scans all `.sql` and `.yml` files and shows exactly what would change — no files are modified.
+This scans all `.sql` and `.yml` files and shows exactly what would change — no files are modified. This is the most complete view of the rename impact.
 
-### 4. Apply the renames
+### 5. Apply the renames
 
 ```bash
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir .
 ```
 
-This creates backup files (`.rename_backup`) and applies the renames.
+This creates backup files (`.rename_backup`) and applies the renames across all files.
 
-### 5. Verify and compile
+### 6. Verify
 
 ```bash
 dbt compile
 dbt run   # optional: run in dev to confirm
 ```
 
-### 6. Clean up and commit
+### 7. Clean up and commit
 
 ```bash
 # Remove backup files
@@ -75,13 +85,13 @@ python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir . \
   --clean-backups
 
-# Remove the column_renames var from dbt_project.yml (one-time operation)
+# Remove the column_renames var from dbt_project.yml
 # Commit and push your branch
 ```
 
 ## Rollback
 
-If something goes wrong:
+If something goes wrong after applying:
 
 ```bash
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
@@ -93,28 +103,20 @@ This restores all files from their `.rename_backup` copies.
 
 ## How It Works
 
-### Audit Macro
+### Audit Macro (`rename_audit`)
 
-- Queries `INFORMATION_SCHEMA.COLUMNS` to find materialized models containing target columns
-- Adapter-aware: works with Snowflake, BigQuery, and Postgres/Redshift
-- Reports schema, table, current column name, and proposed new name
+- Reads `target/manifest.json` — no warehouse connection required
+- Finds columns documented in `schema.yml` files that match your rename map
+- Run `dbt compile` first to ensure the manifest is up to date
 
 ### Python Rename Script
 
-- Scans `.sql` and `.yml` files in your project (skips `target/`, `dbt_packages/`, `.git/`, etc.)
-- Uses word-boundary matching to avoid partial replacements (e.g., renaming `platform` won't touch `platform_id`)
-- Preserves casing (PLATFORM → USER_PROVIDER, platform → user_provider)
+- Scans all `.sql` and `.yml` files in your project (skips `target/`, `dbt_packages/`, `.git/`, etc.)
+- Finds every column reference including undocumented SQL aliases
+- Uses word-boundary matching to avoid partial replacements (e.g. `platform` won't touch `platform_id`)
+- Preserves casing (`PLATFORM` → `USER_PROVIDER`, `platform` → `user_provider`)
 - Creates backups before modifying files
 - Supports dry run, rollback, and backup cleanup
-
-## Supported Warehouses
-
-| Warehouse | Audit Macro | Python Script |
-|-----------|------------|---------------|
-| Snowflake | ✅ | ✅ |
-| BigQuery  | ✅ | ✅ |
-| Postgres  | ✅ | ✅ |
-| Redshift  | ✅ | ✅ |
 
 ## CLI Reference
 
