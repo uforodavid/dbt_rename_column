@@ -1,0 +1,59 @@
+name: Rename Columns
+
+# Triggered manually from the GitHub Actions tab.
+# Point it at the repo that contains your dbt project.
+on:
+  workflow_dispatch:
+    inputs:
+      dbt_project_repo:
+        description: "dbt project repo (owner/repo)"
+        required: true
+      branch:
+        description: "Branch to apply renames on"
+        required: true
+        default: "main"
+      dry_run:
+        description: "Dry run only (no files modified)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dbt project
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.dbt_project_repo }}
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Install dbt deps (to get the package)
+        run: pip install dbt-core && dbt deps
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Run rename script (dry run)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
+            --project-dir . \
+            --dry-run
+
+      - name: Apply renames and commit
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
+            --project-dir . \
+            --no-backup
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: apply column renames from dbt_project.yml vars"
+          git push

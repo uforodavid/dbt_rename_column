@@ -2,7 +2,7 @@
 
 A dbt package for safely renaming columns across your entire project — no manual find-and-replace across files.
 
-No warehouse connection required. Works entirely from your local project files and the dbt manifest.
+Works in **dbt Cloud** and local environments. No warehouse connection required.
 
 ## Installation
 
@@ -20,7 +20,9 @@ Then run:
 dbt deps
 ```
 
-## How to Rename a Column
+---
+
+## Workflow
 
 ### 1. Define your renames
 
@@ -33,54 +35,65 @@ vars:
     foo_bar: foobar
 ```
 
-### 2. Compile your project
-
-```bash
-dbt compile
-```
-
-This generates `target/manifest.json`, which the audit macro reads to find documented columns.
-
-### 3. Audit the blast radius
+### 2. Audit the blast radius
 
 ```bash
 dbt run-operation rename_audit
 ```
 
-This scans your manifest and prints every **documented** column (defined in `schema.yml`) that matches your rename map. No warehouse connection needed.
+Scans the raw SQL of every model in your project and lists which files reference the columns you want to rename. Works in dbt Cloud with no warehouse connection.
 
-> **Note:** Columns used only as SQL aliases (e.g. `'value' as platform`) won't appear in the manifest unless documented in a `schema.yml`. The Python script in step 4 will still find and rename them.
+> Uses simple string matching, so it may flag files where the column name appears inside a longer word (e.g. `platform` may also flag `platform_id`). The rename script uses word-boundary matching for precise replacement.
 
-### 4. Preview file changes (dry run)
+### 3. Apply the renames
+
+Choose the method that fits your setup:
+
+---
+
+#### Option A — Run locally (recommended)
+
+If you have the project cloned on your machine:
 
 ```bash
+# Preview changes first
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir . \
   --dry-run
-```
 
-This scans all `.sql` and `.yml` files and shows exactly what would change — no files are modified. This is the most complete view of the rename impact.
-
-### 5. Apply the renames
-
-```bash
+# Apply
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir .
 ```
 
-This creates backup files (`.rename_backup`) and applies the renames across all files.
+Requires Python and `pip install pyyaml`.
 
-### 6. Verify
+---
+
+#### Option B — GitHub Actions (dbt Cloud users)
+
+If you use dbt Cloud and don't run the project locally, use the included GitHub Actions workflow to apply renames directly from the GitHub UI:
+
+1. Copy `.github/workflows/rename_columns.yml` from this package into your dbt project repo
+2. Go to **Actions → Rename Columns → Run workflow** in GitHub
+3. Enter your repo name and branch, set **dry run = true** to preview first
+4. Re-run with **dry run = false** to apply and auto-commit the changes
+
+The workflow requires a `GH_PAT` secret (a GitHub Personal Access Token with repo write access) added to your repo's Actions secrets.
+
+---
+
+### 4. Verify
 
 ```bash
 dbt compile
 dbt run   # optional: run in dev to confirm
 ```
 
-### 7. Clean up and commit
+### 5. Clean up and commit
 
 ```bash
-# Remove backup files
+# Remove backup files (if you ran locally)
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --project-dir . \
   --clean-backups
@@ -89,9 +102,11 @@ python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
 # Commit and push your branch
 ```
 
+---
+
 ## Rollback
 
-If something goes wrong after applying:
+If something goes wrong after applying locally:
 
 ```bash
 python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
@@ -99,24 +114,28 @@ python dbt_packages/dbt_rename_column/scripts/rename_columns.py \
   --rollback
 ```
 
-This restores all files from their `.rename_backup` copies.
+Restores all files from their `.rename_backup` copies.
+
+---
 
 ## How It Works
 
 ### Audit Macro (`rename_audit`)
 
-- Reads `target/manifest.json` — no warehouse connection required
-- Finds columns documented in `schema.yml` files that match your rename map
-- Run `dbt compile` first to ensure the manifest is up to date
+- Scans `graph.nodes` — the parsed dbt project graph
+- Checks the raw SQL of every model, seed, and snapshot for column name references
+- No warehouse connection, no `dbt compile` needed
+- Available in dbt Cloud via `dbt run-operation rename_audit`
 
 ### Python Rename Script
 
 - Scans all `.sql` and `.yml` files in your project (skips `target/`, `dbt_packages/`, `.git/`, etc.)
-- Finds every column reference including undocumented SQL aliases
-- Uses word-boundary matching to avoid partial replacements (e.g. `platform` won't touch `platform_id`)
+- Uses word-boundary regex to avoid partial replacements (`platform` won't touch `platform_id`)
 - Preserves casing (`PLATFORM` → `USER_PROVIDER`, `platform` → `user_provider`)
 - Creates backups before modifying files
 - Supports dry run, rollback, and backup cleanup
+
+---
 
 ## CLI Reference
 
